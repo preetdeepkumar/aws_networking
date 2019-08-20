@@ -1,0 +1,62 @@
+Resources:
+  myVPC:
+    Type: AWS::EC2::VPC
+    Properties: 
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: 'false'
+      EnableDnsSupport: 'false'
+      InstanceTenancy: default
+      Tags: 
+       - Key: Name
+         Value: preetdeep
+       - Key: Application
+         Value:
+           Ref: "AWS::StackName"  
+
+  myPrivateSubnet1A:
+    Type: AWS::EC2::Subnet
+    Properties: 
+      VpcId:
+        Ref: myVPC
+      AvailabilityZone: ap-south-1a
+      CidrBlock: 10.0.1.0/24
+      MapPublicIpOnLaunch: false
+      Tags: 
+      - Key: Name
+        Value: private-subnet-ap-south-1a
+        
+      - Key: Application
+        Value:
+          Ref: "AWS::StackName"
+  
+  myPrivateSubnet1B:
+    Type: AWS::EC2::Subnet
+    Properties: 
+      VpcId:
+        Ref: myVPC
+      AvailabilityZone: ap-south-1b
+      CidrBlock: 10.0.2.0/24
+      MapPublicIpOnLaunch: false
+      Tags: 
+      - Key: Name
+        Value: private-subnet-ap-south-1b
+        
+      - Key: Application
+        Value:
+          Ref: "AWS::StackName"
+          
+  myPrivateSubnet1C:
+    Type: AWS::EC2::Subnet
+    Properties: 
+      VpcId:
+        Ref: myVPC
+      AvailabilityZone: ap-south-1c
+      CidrBlock: 10.0.3.0/24
+      MapPublicIpOnLaunch: false
+      Tags: 
+      - Key: Name
+        Value: private-subnet-ap-south-1c
+        
+      - Key: Application
+        Value:
+          Ref: "AWS::StackName"
