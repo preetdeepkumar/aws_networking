@@ -1,0 +1,149 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: 
+  Sample template to create 2 EC2 with public IP. Create two SG and associate with each EC2.
+  One SG will allow http traffic other will not. You can edit the SG rule through AWS console and fix it.
+  You will be billed for the AWS resources used if you create a stack from this template.
+  After deleting stack, remember to delete the associated S3 bucket.
+
+# get the name of the base stack which is created first and has VPC details
+Parameters:
+  VPCStackName:
+    Description: Name of the base VPC stack
+    Type: String
+    Default: BaseStack
+    
+  KeyPairName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+    Type: 'AWS::EC2::KeyPair::KeyName'
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+    Default: apj-mumbai
+  
+  InstanceType:
+    Description: WebServer EC2 instance type
+    Type: String
+    Default: t2.micro
+    
+Resources:
+  # first create two security groups for each of the EC2.
+  mySG1A:
+    Type: AWS::EC2::SecurityGroup
+    Properties: 
+      GroupDescription: Enable http(80) & ssh(22) access
+      GroupName: WebServer-SG-1A
+      VpcId: 
+        Fn::ImportValue: !Sub "${VPCStackName}-VPCID" # note here we are not using AWS::StackName
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: 0.0.0.0/0 # any IP
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 0.0.0.0/0 # any IP  
+      Tags: 
+       - Key: Name
+         Value: demo-sg-1A
+       - Key: Application
+         Value:
+           Ref: "AWS::StackName"
+  
+ # second security group with ssh access rule
+  mySG1B:
+    Type: AWS::EC2::SecurityGroup
+    Properties: 
+      GroupDescription: Enable ssh(80) and local access
+      GroupName: Local-SG-1B
+      VpcId: 
+        Fn::ImportValue: !Sub "${VPCStackName}-VPCID" # note here we are not using AWS::StackName      
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 0.0.0.0/0 # any IP
+      Tags: 
+       - Key: Name
+         Value: demo-sg-1B
+       - Key: Application
+         Value:
+           Ref: "AWS::StackName"         
+  
+  # allow only local traffic
+  SGBaseIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref mySG1B
+      IpProtocol: '-1'
+      FromPort: '-1'
+      ToPort: '-1'
+      SourceSecurityGroupId: !Ref mySG1B
+  
+  # first EC2 instance which will have access for http  
+  EC2Instance1A:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceType: !Ref InstanceType
+      SubnetId:
+        Fn::ImportValue: !Sub "${VPCStackName}-SUBNET1A"      
+      SecurityGroupIds:
+        - !Ref mySG1A
+      KeyName: !Ref KeyPairName
+      ImageId: ami-0cb0e70f44e1a4bb5
+      Tags: 
+       - Key: Name
+         Value: demo-ec2-1A
+       - Key: Application
+         Value:
+           Ref: "AWS::StackName"
+           
+  # second EC2 instance which will only have local access
+  EC2Instance1B:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceType: !Ref InstanceType
+      SubnetId:
+        Fn::ImportValue: !Sub "${VPCStackName}-SUBNET1B"
+      SecurityGroupIds:
+        - !Ref mySG1B
+      KeyName: !Ref KeyPairName
+      ImageId: ami-0cb0e70f44e1a4bb5
+      Tags: 
+       - Key: Name
+         Value: demo-ec2-1B
+       - Key: Application
+         Value:
+           Ref: "AWS::StackName"         
+
+# output important values for easy viewing in cloudformation dashboard
+Outputs:
+  InstanceId1A:
+    Description: InstanceId of the first EC2 instance
+    Value: !Ref EC2Instance1A
+  
+  PublicDNS:
+    Description: Public DNSName of the first created EC2 instance
+    Value: !GetAtt 
+      - EC2Instance1A
+      - PublicDnsName
+      
+  PublicIP:
+    Description: Public IP address of the first created EC2 instance
+    Value: !GetAtt 
+      - EC2Instance1A
+      - PublicIp
+  
+  InstanceId1B:
+    Description: InstanceId of the second EC2 instance
+    Value: !Ref EC2Instance1B
+        
+  PublicDNS:
+    Description: Public DNSName of the second created EC2 instance
+    Value: !GetAtt
+      - EC2Instance1B
+      - PublicDnsName
+      
+  PublicIP:
+    Description: Public IP address of the second created EC2 instance
+    Value: !GetAtt
+      - EC2Instance1B
+      - PublicIp
